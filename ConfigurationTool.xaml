@@ -22,20 +22,35 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="200"/>
                     <ColumnDefinition />
+                    <ColumnDefinition />
                 </Grid.ColumnDefinitions>
+
                 
                 <TabControl x:Name="tabControl"
                             ItemsSource="{Binding Source={StaticResource TabListResource}}"
-                            Grid.Column="0" 
+                            Grid.Column="0" Grid.Row="0"
                             ItemTemplate="{StaticResource HeaderTemplate}"
                             ContentTemplate="{StaticResource ContentTemplate}"
 					        TabStripPlacement="Top" 
-					        Margin="0,0,0,9.667" Width="169" />
+					        Margin="0,0,0,9.667" Width="169"
+                            >
+
+                    
+                </TabControl>
+
+                <Button x:Name="btnTest"
+                        Content="hide"
+                        Margin="1,1,1,1"
+                        Grid.Column="1"
+                        
+                        Click="OnClick1"
+                />    
 
 
-                <Image Name="XAMLImage" Grid.Column="1"/>
+
+                <Image Name="XAMLImage" Grid.Column="2"/>
                 
-                <Canvas Name="XAMLCanvas" Grid.Column="1"/>
+                <Canvas Name="XAMLCanvas" Grid.Column="2"/>
             </Grid>
         </DockPanel>
     </Viewbox>

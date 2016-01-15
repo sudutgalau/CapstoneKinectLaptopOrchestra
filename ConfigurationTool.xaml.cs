@@ -10,7 +10,7 @@ using System.Collections.ObjectModel;
 namespace LaptopOrchestra.Kinect
 {
     public partial class ConfigurationTool : Window
-    {
+    { 
         /// <summary>
         ///     List of bodies
         /// </summary>
@@ -39,8 +39,12 @@ namespace LaptopOrchestra.Kinect
         private Timer _timer;
         private Thread _thread;
 
-        public ConfigurationTool(SessionManager sessionManager, KinectProcessor kinectProcessor)
+        private bool _hide_flag;
+
+    public ConfigurationTool(SessionManager sessionManager, KinectProcessor kinectProcessor)
         {
+            _hide_flag = false;
+
             InitializeComponent();
 
             _sessionManager = sessionManager;
@@ -142,70 +146,84 @@ namespace LaptopOrchestra.Kinect
 
         private void Reader_MultiSourceFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
         {
+
             var reference = e.FrameReference.AcquireFrame();
 
-            // Draw the Image from the Camera
-            using (var frame = reference.ColorFrameReference.AcquireFrame())
-            {
-                if (frame != null)
+            if (_hide_flag == false) { 
+
+                // Draw the Image from the Camera
+                using (var frame = reference.ColorFrameReference.AcquireFrame())
                 {
-                    XAMLImage.Source = frame.ToBitmap();
-                }
-            }
-
-            // Acquire skeleton data as well
-            using (var frame = reference.BodyFrameReference.AcquireFrame())
-            {
-                if (frame == null) return;
-
-                XAMLCanvas.Children.Clear();
-
-                _bodies = new Body[frame.BodyFrameSource.BodyCount];
-
-                frame.GetAndRefreshBodyData(_bodies);
-
-                foreach (var body in _bodies)
-                {
-                    if (body == null || !body.IsTracked) continue;
-
-                    IReadOnlyDictionary<JointType, Joint> joints = body.Joints;
-
-                    // convert the joint points to depth (display) space
-                    Dictionary<JointType, Point> alignedJointPoints = new Dictionary<JointType, Point>();
-
-                    foreach (JointType jointType in joints.Keys)
+                    if (frame != null)
                     {
-                        // sometimes the depth(Z) of an inferred joint may show as negative
-                        // clamp down to 0.1f to prevent coordinatemapper from returning (-Infinity, -Infinity)
-                        CameraSpacePoint position = joints[jointType].Position;
-                        if (position.Z < 0)
+                        XAMLImage.Source = frame.ToBitmap();
+                    }
+                }
+
+                // Acquire skeleton data as well
+                using (var frame = reference.BodyFrameReference.AcquireFrame())
+                {
+                    if (frame == null) return;
+
+                    XAMLCanvas.Children.Clear();
+
+                    _bodies = new Body[frame.BodyFrameSource.BodyCount];
+
+                    frame.GetAndRefreshBodyData(_bodies);
+
+                    foreach (var body in _bodies)
+                    {
+                        if (body == null || !body.IsTracked) continue;
+
+                        IReadOnlyDictionary<JointType, Joint> joints = body.Joints;
+
+                        // convert the joint points to depth (display) space
+                        Dictionary<JointType, Point> alignedJointPoints = new Dictionary<JointType, Point>();
+
+                        foreach (JointType jointType in joints.Keys)
                         {
-                            position.Z = 0.01f;
+                            // sometimes the depth(Z) of an inferred joint may show as negative
+                            // clamp down to 0.1f to prevent coordinatemapper from returning (-Infinity, -Infinity)
+                            CameraSpacePoint position = joints[jointType].Position;
+                            if (position.Z < 0)
+                            {
+                                position.Z = 0.01f;
+                            }
+
+                            ColorSpacePoint colorPoint = _coordinateMapper.MapCameraPointToColorSpace(position);
+
+                            alignedJointPoints[jointType] = new Point(colorPoint.X, colorPoint.Y);
                         }
 
-                        ColorSpacePoint colorPoint = _coordinateMapper.MapCameraPointToColorSpace(position);
-
-                        alignedJointPoints[jointType] = new Point(colorPoint.X, colorPoint.Y);
-                    }
-
-                    TabData ti = tabControl.SelectedItem as TabData;
-                    if ( ti != null )
-                    {                       
-                        string id = ti.Header;
-                        XAMLCanvas.DrawSkeleton(body, alignedJointPoints, _localSessions[_localSessions.IndexOf(ti)].displayFlags);
-                    }
-					else                  
-                    {
-                        var jointTypes = Enum.GetValues(typeof(JointType));
-                        Dictionary<JointType, bool> displayFlags = new Dictionary<JointType, bool>();
-                        foreach (JointType jt in jointTypes)
-                        {                            
-                            displayFlags[jt] = true;
+                        TabData ti = tabControl.SelectedItem as TabData;
+                        if ( ti != null )
+                        {                       
+                            string id = ti.Header;
+                            XAMLCanvas.DrawSkeleton(body, alignedJointPoints, _localSessions[_localSessions.IndexOf(ti)].displayFlags);
                         }
-                        XAMLCanvas.DrawSkeleton(body, alignedJointPoints, displayFlags);
+					    else                  
+                        {
+                            var jointTypes = Enum.GetValues(typeof(JointType));
+                            Dictionary<JointType, bool> displayFlags = new Dictionary<JointType, bool>();
+                            foreach (JointType jt in jointTypes)
+                            {                            
+                                displayFlags[jt] = true;
+                            }
+                            XAMLCanvas.DrawSkeleton(body, alignedJointPoints, displayFlags);
+                        }
                     }
                 }
             }
+
+
+        }
+
+        public void OnClick1(object sender, RoutedEventArgs e)
+        {
+            if (_hide_flag == true)
+                _hide_flag = false;
+            else _hide_flag = true;
+            
         }
     }
 }
